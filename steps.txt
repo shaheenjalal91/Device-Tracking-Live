@@ -1,0 +1,158 @@
+first create a folder with your project name
+now come to vs code, go to terminal and write this command:  npm init -y 
+this command will install a json package for your project and in json file you can also rename your app as per your wish 
+but after that you have to create the same type of js file
+Now, we will install express as we already know express will behave here as a middleware for us
+Write the command in terminal: npm i express
+ALso, we will install a package ejs which will help us to write html in js
+write this command: npm i ejs
+For now just install this package as well: npm i socket.io
+Now we will create a app.js folder with the same name that we used in json file
+so first we will require express:  const express = require('express');
+We will create a const variable app and will asign it all the powers of express as an object :  const app = express();
+Now we will create a route and a server for us: 
+(write this also in app.js)
+
+app.get("/", function(req,res){
+    res.render("index");
+});
+app.listen(3000); 
+
+//here 3000 is the server and nothing else, you can run it as localhost:3000
+
+But before you write this address in your url of the browser we have to initiate the server as well
+We will initiate the server on our terminal with a command: npx nodemon app.js
+Here we can check whether everything is going fine or not which means we should see Hello printed on our browser
+fine if it is working let us move forward
+
+Now we will setup the socket io which we aquired a while ago in our terminal
+So, we will write this code in our app.js :
+const socketio = require('socket.io');
+Now the thing is socketio runs on http server so we have to create that server as well for it
+So this is how you will create that server for it(write this also in app.js)
+const http = require('http');
+const server = http.createServer(app);
+
+Now we will call the socketio as a method  (function)
+So we will call the socketio and will pass the server in it and will store it in a variable
+const io = socketio(server);
+
+Now since we are directly working on the server so change the app.listen(3000) to server.listen(3000);
+
+Ok so we are good till here now, let us now come to ejs part
+so first we will setup the ejs (we are still working in app.js)
+create a folder views page and inside that index.ejs
+app.set("view engine", "ejs");
+
+
+Now I will setup the static folder as well which will include the images, video etc 
+app.set(express.static(path.join(__dirname,"public")));
+SO basically what this line of code what will do is that it will join the static files with the public folder
+So now we will create a public folder and inside that we will create css(inside that style.css) and js folder and inside js foler we will create script.js
+
+Write this code in style.css:
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body{
+    width: 100%;
+    height: 100%;
+}
+
+So we have already made a views folder and inside that we had created a index.ejs file which is the part of frontend
+write this code first in it:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Time Tracker</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div id="map">
+        
+    </div>
+</body>
+</html>
+
+Now we have to link leafle to our index.ejs which is a part of script
+Go to your browser: search for "leafle css and js cdn"
+Copy the minjs which is latest and paste it in your ejs file in the body part
+Also get the min.css and paste it also in the head part of ejs
+So, basically this will give us a feel of maps cordinates
+
+Now we will link our js file also:
+<script src="/js/script.js"></script>
+
+
+Now search socket io cdn in your browser and you will see the client installation, click on that
+You will see "FROM A CDN", copy that code and paste it in ejs file as well
+
+Now go to script.js
+First we will write a line of code to send a request to the backend
+const socket = io();
+so there must be a connection on our app.js of socket
+write this code in your app.js:
+io.on("connection", function(socket){
+    console.log("connected");
+});
+
+
+Ok so, we are done till now
+Now I will check whether my browser supports geolocation or not
+for that I will write this code in script.js
+
+const socket = io();
+
+if(navigator.geolocation){
+      navigator.geolocation.watchPosition((position)=>{
+        const { latitude, longitude } = position.coords;
+        socket.emit("send-location", {latitude, longitude});
+      },
+      (error)=>{
+        console.log(error);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 3000,
+      }
+    );
+}
+
+const map = L.map('map').setView([0, 0], 16);; //here 10 is the zoom level
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { //this is for the map
+     attribution: "Shaheen_locating_Map"
+}).addTo(map); 
+
+const markers = {};
+
+socket.on("receive-location", (data)=>{
+    const {id, latitude, longitude} = data;
+    map.setView([latitude, longitude]);
+    if(markers[id]){
+      markers[id].setLatLng([latitude, longitude]);
+    }
+    else{
+        markers[id] = L.marker([latitude, longitude]).addTo(map);
+    }
+});
+
+
+//if I am disconnected still the mark shoudl be there
+socket.on("user-disconnected", (id)=>{
+     if(markers[id]){
+         map.removeLayer(markers[id]);
+         delete markers[id];
+     }
+});
+
+
+
+
+
